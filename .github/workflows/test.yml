@@ -1,0 +1,61 @@
+name: Deploy Allure Report
+
+on:
+  push:
+    branches:
+      - playground
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Java (if needed for your build)
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'  # or adopt, zulu, etc.
+          java-version: '11'       # or a version compatible with your project
+
+      # Step 3: Set up Node.js for generating the Allure report
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16.17.0'
+
+           # Step 3: Set up Node.js for generating the Allure report
+      - name: Install node
+        run: npm install
+          
+      - name: Retrieve previous Allure history
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          if [ -d allure-report/history ]; then
+            mkdir -p allure-results/history
+            cp -r allure-report/history allure-results/
+          fi
+          
+      # Step 4: Install Allure Commandline
+      - name: Install Allure Commandline
+        run: npm install -g allure-commandline
+
+      # Step 5: Generate the Allure report
+      - name: Generate Allure Report
+        run: allure generate allure-results -o allure-report --clean
+        
+      - name: Copy history to Allure report
+        run: |
+          mkdir -p allure-report/history
+          cp -r allure-results/history allure-report/
+      
+      # Step 6: Deploy report to GitHub Pages
+      - name: Deploy report to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./allure-report
+          publish_branch: gh-pages
